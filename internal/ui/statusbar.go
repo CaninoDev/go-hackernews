@@ -1,6 +1,6 @@
 package ui
 
-import "code.rocketnine.space/tslocum/cview"
+import 	"code.rocketnine.space/tslocum/cview"
 
 func StatusBar() cview.Primitive {
 	statusBar := cview.NewTextView()

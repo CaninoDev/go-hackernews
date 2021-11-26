@@ -9,10 +9,9 @@ type Subscription interface {
 	Close() error
 }
 
-
 type subscription struct {
 	postIDs []int
-	db *FirebaseClient
+	db      *FirebaseClient
 	updates chan Post
 	closing chan chan error
 }
@@ -23,7 +22,7 @@ func (s *subscription) Updates() <-chan Post {
 
 func (s *subscription) Close() error {
 	errCh := make(chan error)
-	s.closing <-errCh
+	s.closing <- errCh
 	return <-errCh
 }
 
@@ -47,11 +46,11 @@ func (s *subscription) loop() {
 		post, err = s.db.Item(id)
 		select {
 		case errCh := <-s.closing:
-			errCh <-err
+			errCh <- err
 			close(s.updates)
 			return
 		default:
-			s.updates <-post
+			s.updates <- post
 		}
 		wg.Done()
 	}
@@ -61,7 +60,7 @@ func (s *subscription) loop() {
 func (f *FirebaseClient) Subscribe(IDs []int) Subscription {
 	s := &subscription{
 		postIDs: IDs,
-		db: f,
+		db:      f,
 		updates: make(chan Post),
 	}
 	go s.loop()

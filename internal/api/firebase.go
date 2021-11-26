@@ -41,5 +41,3 @@ func NewClientWithDefaults(ctx context.Context) (*FirebaseClient, error) {
 		fb,
 	}, nil
 }
-
-

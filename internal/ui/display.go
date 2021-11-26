@@ -9,11 +9,11 @@ type Display struct {
 	App       *cview.Application
 	DB        *api.FirebaseClient
 	Root      *cview.Grid
-	Cover     *cview.Flex
-	Posts     *Posts
-	Listings  map[string]*cview.List
-	Comments  *Comments
+	Cover    *cview.Flex
+	Posts    *Posts
+	Comments *Comments
 	StatusBar *cview.ProgressBar
+	DebugBar *cview.TextView
 }
 
 func Init(db *api.FirebaseClient) *Display {
@@ -27,8 +27,10 @@ func Init(db *api.FirebaseClient) *Display {
 
 	display.Root = cview.NewGrid()
 	display.Cover = Cover()
+	display.StatusBar = cview.NewProgressBar()
+	display.DebugBar = cview.NewTextView()
 
-	display.Posts = display.NewPosts()
+	display.Posts = display.NewPostsView()
 
 	display.Comments = NewComments()
 
@@ -42,17 +44,15 @@ func Init(db *api.FirebaseClient) *Display {
 	mainPane.AddItem(display.Posts, 0, 1, true)
 	mainPane.AddItem(commentDisplay, 0, 1, false)
 
-	display.StatusBar = cview.NewProgressBar()
-
 	display.Root = cview.NewGrid()
-	display.Root.SetRows(0, 1)
+	display.Root.SetRows(0, 1, 1)
 	display.Root.SetColumns(0)
 	display.Root.SetBackgroundColor(cview.Styles.PrimitiveBackgroundColor)
 
 	//display.Root.AddItem(display.Cover,0,0,1,1,0,0,false)
 	display.Root.AddItem(mainPane, 0, 0, 1, 1, 0, 0, false)
 	display.Root.AddItem(display.StatusBar, 1, 0, 1, 1, 0, 0, false)
-
+	display.Root.AddItem(display.DebugBar, 2, 0, 1,1,0,0,false )
 	//flex := cview.NewFlex()
 	//flex.SetDirection(cview.FlexRow)
 	//flex.AddItemAtIndex(0, Cover(), 0, 1, false)
@@ -65,11 +65,9 @@ func Init(db *api.FirebaseClient) *Display {
 }
 
 func (d *Display) Run() error {
-
 	err := d.App.Run()
 	if err != nil {
 		return err
 	}
-
 	return nil
 }

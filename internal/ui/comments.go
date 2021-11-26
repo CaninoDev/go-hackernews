@@ -1,9 +1,9 @@
 package ui
 
 import (
-	"code.rocketnine.space/tslocum/cview"
 	"fmt"
 	"github.com/CaninoDev/go-hackernews/internal/api"
+	"code.rocketnine.space/tslocum/cview"
 	"github.com/dustin/go-humanize"
 )
 

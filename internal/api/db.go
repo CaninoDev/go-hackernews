@@ -15,7 +15,16 @@ const (
 	Jobs
 )
 
-func (e EndPoint) endpoint() string {
+var toEndPoint = map[string]EndPoint{
+	"Top": Top,
+	"Best": Best,
+	"New": NewS,
+	"Ask": Ask,
+	"Show": Show,
+	"Jobs": Jobs,
+}
+
+func (e EndPoint) endpointURL() string {
 	return [...]string{"topstories", "beststories", "newstories", "askstories", "showstories", "jobstories"}[e]
 }
 
@@ -33,8 +42,9 @@ func (f *FirebaseClient) Item(id int) (Post, error) {
 	return item, err
 }
 
-func (f *FirebaseClient) Collection(endPoint EndPoint) ([]int, error) {
-	ref := f.NewRef(fmt.Sprintf("%s/%s", Version, endPoint.endpoint()))
+func (f *FirebaseClient) Collection(endPointStr string) ([]int, error) {
+	endPoint := toEndPoint[endPointStr]
+	ref := f.NewRef(fmt.Sprintf("%s/%s", Version, endPoint.endpointURL()))
 	var stories []int
 	err := ref.Get(f.ctx, &stories)
 	if err != nil {
@@ -51,4 +61,10 @@ func (f *FirebaseClient) MaxItem() (int, error) {
 		return 0, err
 	}
 	return maxItem, nil
+}
+
+func (f *FirebaseClient) EndPoints() []string {
+	return []string{
+		Top.String(), Best.String(), NewS.String(), Ask.String(), Show.String(), Jobs.String(),
+	}
 }

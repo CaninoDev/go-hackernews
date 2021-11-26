@@ -106,7 +106,7 @@ func (p post) Parts() []int {
 		return []int{}
 	}
 
-	var parts = make ([]int, len(iParts))
+	var parts = make([]int, len(iParts))
 
 	for _, v := range iParts {
 		parts = append(parts, v.(int))
@@ -118,5 +118,3 @@ func (p post) Descendants() int {
 	descendants, _ := p["descendants"].(int)
 	return descendants
 }
-
-
