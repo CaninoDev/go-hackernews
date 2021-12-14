@@ -1,22 +1,22 @@
-package api
+package store
 
 import (
 	"sync"
 )
 
 type Subscription interface {
-	Updates() <-chan Post
+	Updates() <-chan Item
 	Close() error
 }
 
 type subscription struct {
-	postIDs []int
-	db      *FirebaseClient
-	updates chan Post
+	ids     []int
+	store   *Store
+	updates chan Item
 	closing chan chan error
 }
 
-func (s *subscription) Updates() <-chan Post {
+func (s *subscription) Updates() <-chan Item {
 	return s.updates
 }
 
@@ -28,22 +28,25 @@ func (s *subscription) Close() error {
 
 func (s *subscription) loop() {
 	defer close(s.updates)
-	var err error
+
 	var wg sync.WaitGroup
-	var post Post
 
 	reset := func() {
-		if len(s.postIDs) == 0 {
+		if len(s.ids) == 0 {
 			<-s.closing
 			return
 		}
 	}
 	reset()
 
-	for _, id := range s.postIDs {
+	for _, id := range s.ids {
+		var err error
+		var post Item
+
 		wg.Add(1)
 
-		post, err = s.db.Item(id)
+		post, err = s.store.Item(id)
+
 		select {
 		case errCh := <-s.closing:
 			errCh <- err
@@ -54,15 +57,4 @@ func (s *subscription) loop() {
 		}
 		wg.Done()
 	}
-
-}
-
-func (f *FirebaseClient) subscribe(IDs []int) Subscription {
-	s := &subscription{
-		postIDs: IDs,
-		db:      f,
-		updates: make(chan Post),
-	}
-	go s.loop()
-	return s
 }

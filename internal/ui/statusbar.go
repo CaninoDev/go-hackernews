@@ -2,9 +2,12 @@ package ui
 
 import 	"code.rocketnine.space/tslocum/cview"
 
-func StatusBar() cview.Primitive {
-	statusBar := cview.NewTextView()
+type StatusBar struct {
+	*cview.ProgressBar
+}
 
-	statusBar.SetTextColor(Orange)
-	return statusBar
+func NewStatusBar() *StatusBar {
+	return &StatusBar{
+		ProgressBar: cview.NewProgressBar(),
+	}
 }

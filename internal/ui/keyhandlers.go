@@ -1,50 +1,88 @@
 package ui
 
 import (
-	"container/ring"
-	"fmt"
+	"code.rocketnine.space/tslocum/cview"
 	"github.com/CaninoDev/go-hackernews/internal/api"
 	"github.com/gdamore/tcell/v2"
-	"time"
 )
 
+//func (a *App) initializeBindings() {
+//	bindingCfg := cbind.NewConfiguration()
+//
+//	bindingCfg.SetKey(tcell.ModNone, tcell.KeyTab, a.handleToggle)
+//
+//	bindingCfg.SetKey(tcell.ModNone, tcell.KeyEscape, a.quit)
+//
+//	bindingCfg.SetKey(tcell.ModCtrl, 'n', a.handleTabSwitch)
+//	bindingCfg.Set("Ctrl+n", )
+//	for _, endpoint := range api.AllEndPoints() {
+//		endpointRune := []rune(strings.ToLower(endpoint.String()[0:1]))[0]
+//		bindingCfg.SetRune(tcell.ModNone, endpointRune, func(event *tcell.EventKey) *tcell.EventKey {
+//			//a.browser.debugBar.SetText(endpoint.String())
+//			a.browser.lists.SetCurrentTab(endpoint.String())
+//			return nil
+//		})
+//	}
+//	a.ui.SetInputCapture(bindingCfg.Capture)
+//}
 
-func delaySeconds(n time.Duration, d *Display) {
-	endpoints := d.DB.EndPoints()
-	ring := ring.New(len(endpoints))
-
-	for _, endpoint := range endpoints {
-		ring.Value = endpoint
-		ring.Next()
-	}
-
-	for _ = range time.Tick(n * time.Second) {
-		time.Sleep(2 * time.Second)
-		d.DebugBar.Clear()
-		d.DebugBar.SetText(fmt.Sprintf("%v", ring.Value))
-	}
-
+func (a *App) handleTabSwitch(ev *tcell.EventKey) *tcell.EventKey {
+	return nil
 }
-func (d *Display) AppKeyHandler(event *tcell.EventKey) *tcell.EventKey {
+
+func (a *App) quit(_ *tcell.EventKey) *tcell.EventKey {
+	a.ui.Stop()
+	return nil
+}
+
+func (a *App) handleToggle(_ *tcell.EventKey) *tcell.EventKey {
+	panel, _ := a.root.GetFrontPanel()
+
+	a.browser.debugBar.SetText(panel)
+	if panel == "post" {
+		a.root.SetCurrentPanel("browser")
+	} else {
+		a.root.SetCurrentPanel("post")
+	}
+	return nil
+}
+
+func (a *App) initializeInputHandler(panes ...cview.Primitive) {
+	panes = append(panes)
+	a.focusManager = cview.NewFocusManager(a.ui.SetFocus)
+	a.focusManager.SetWrapAround(true)
+	a.focusManager.Add(panes...)
+}
+
+func (a *App) inputHandler(event *tcell.EventKey) *tcell.EventKey {
 	switch event.Key() {
 	case tcell.KeyEscape:
-		d.App.Stop()
+		a.ui.Stop()
 	case tcell.KeyCtrlN:
-		d.Posts.SetCurrentTab(api.NewS.String())
+		a.browser.currentTab = api.New.String()
+		a.browser.lists.SetCurrentTab(api.New.String())
 	case tcell.KeyCtrlJ:
-		d.Posts.SetCurrentTab(api.Jobs.String())
+		a.browser.currentTab = api.Jobs.String()
+		a.browser.lists.SetCurrentTab(api.Jobs.String())
 	case tcell.KeyCtrlT:
-		d.Posts.SetCurrentTab(api.Top.String())
+		a.browser.currentTab = api.Top.String()
+		a.browser.lists.SetCurrentTab(api.Top.String())
 	case tcell.KeyCtrlB:
-		d.Posts.SetCurrentTab(api.Best.String())
+		a.browser.currentTab = api.Best.String()
+		a.browser.lists.SetCurrentTab(api.Best.String())
 	case tcell.KeyCtrlS:
-		d.Posts.SetCurrentTab(api.Show.String())
+		a.browser.currentTab = api.Show.String()
+		a.browser.lists.SetCurrentTab(api.Show.String())
 	case tcell.KeyCtrlA:
-		d.Posts.SetCurrentTab(api.Ask.String())
-	case tcell.KeyCtrlG:
-		d.generatePostList()
-	case tcell.KeyCtrlC:
-		d.App.SetFocus(d.Comments.Tree)
+		a.browser.currentTab = api.Ask.String()
+		a.browser.lists.SetCurrentTab(api.Ask.String())
+	case tcell.KeyCtrlP:
+		a.browser.pageNav(false)
+	case tcell.KeyCtrlL:
+		a.browser.pageNav(true)
+	default:
+		return event
 	}
+	go a.browser.populateList()
 	return event
 }
