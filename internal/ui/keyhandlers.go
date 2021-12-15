@@ -35,14 +35,14 @@ func (a *App) quit(_ *tcell.EventKey) *tcell.EventKey {
 	return nil
 }
 
-func (a *App) handleToggle(_ *tcell.EventKey) *tcell.EventKey {
-	panel, _ := a.root.GetFrontPanel()
+func (a *App) handleToggle() *tcell.EventKey {
+	panel, _ := a.panels.GetFrontPanel()
 
 	a.browser.debugBar.SetText(panel)
 	if panel == "post" {
-		a.root.SetCurrentPanel("browser")
+		a.panels.SetCurrentPanel("browser")
 	} else {
-		a.root.SetCurrentPanel("post")
+		a.panels.SetCurrentPanel("post")
 	}
 	return nil
 }
@@ -58,6 +58,8 @@ func (a *App) inputHandler(event *tcell.EventKey) *tcell.EventKey {
 	switch event.Key() {
 	case tcell.KeyEscape:
 		a.ui.Stop()
+	case tcell.KeyTab:
+		a.handleToggle()
 	case tcell.KeyCtrlN:
 		a.browser.currentTab = api.New.String()
 		a.browser.lists.SetCurrentTab(api.New.String())

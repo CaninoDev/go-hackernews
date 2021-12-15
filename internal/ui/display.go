@@ -10,7 +10,8 @@ type App struct {
 	ui           *cview.Application
 	focusManager *cview.FocusManager
 	store        *store.Store
-	root         *cview.Panels
+	statusBar    *cview.TextView
+	panels       *cview.Panels
 	Cover        *cview.Flex
 	browser      *Browser
 	post         *Post
@@ -29,22 +30,56 @@ func New() (*App, error) {
 
 	app.browser = NewBrowser(app)
 	app.post = NewPost(app)
+	app.statusBar = cview.NewTextView()
 
 	return app, nil
 }
 
 func (a *App) Start() error {
 
-	a.root = a.initializePanels()
-	a.initializeData()
+	headerLine := a.initializeHeader()
+	a.panels = a.initializePanels()
+
+	rootGrid := cview.NewFlex()
+	rootGrid.SetBackgroundColor(cview.Styles.PrimitiveBackgroundColor)
+	rootGrid.SetBackgroundTransparent(false)
+	rootGrid.SetDirection(cview.FlexRow)
+	rootGrid.AddItem(headerLine, 1, 0, false)
+	rootGrid.AddItem(a.panels, 0, 1, true)
 	a.ui.SetInputCapture(a.inputHandler)
-	a.ui.SetRoot(a.root, true)
+	a.ui.SetRoot(rootGrid, true)
+
+	a.initializeData()
 
 	err := a.ui.Run()
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (a *App) initializeHeader() *cview.Grid {
+	logo := initializeLogo()
+	emptyBar := cview.NewTextView()
+	a.statusBar = cview.NewTextView()
+
+	grid := cview.NewGrid()
+	grid.SetBackgroundColor(cview.Styles.PrimitiveBackgroundColor)
+	grid.SetBackgroundTransparent(false)
+	grid.SetRows(0)
+	grid.SetColumns(13, 0, 9)
+	grid.AddItem(logo, 1, 1, 1, 1, 1, 0, false)
+	grid.AddItem(emptyBar, 1, 2, 1, 1, 1, 0, false)
+	grid.AddItem(a.statusBar, 1, 3, 1, 1, 1, 0, false)
+
+	return grid
+}
+
+func initializeLogo() *cview.TextView {
+	textView := cview.NewTextView()
+	textView.SetDynamicColors(true)
+	textView.SetText("[:#ff6600:b]Y[-:-:] Hacker News")
+	return textView
 }
 
 func (a *App) initializePanels() *cview.Panels {
@@ -60,6 +95,7 @@ func (a *App) initializePanels() *cview.Panels {
 	panels.AddPanel("post", postPanel, true, false)
 	panels.AddPanel("browser", browserPanel, true, true)
 
+	a.initializeInputHandler(browserPanel, postPanel)
 	return panels
 }
 
@@ -93,51 +129,3 @@ func (a *App) initializePostLayout() *cview.Grid {
 func (a *App) initializeData() {
 	//a.browser.populate()
 }
-
-//func NewStore(str *store.Store) *App {
-//	var app App
-//
-//	app.ui = cview.NewApplication()
-//	defer app.ui.HandlePanic()
-//
-//	app.store = str
-//
-//	app.root = cview.NewGrid()
-//	app.Cover = Cover()
-//	app.StatusBar = cview.NewProgressBar()
-//	app.DebugBar = cview.NewTextView()
-//
-//	app.ListPanels = NewListPanels()
-//
-//	app.CommentsTree = NewComments()
-//
-//	commentDisplay := cview.NewFlex()
-//	commentDisplay.AddItem(app.CommentsTree.Title, 1, 0, false)
-//	commentDisplay.AddItem(app.CommentsTree.Tree, 0, 1, false)
-//	commentDisplay.AddItem(app.CommentsTree.Text, 0, 1, false)
-//
-//	mainPane := cview.NewFlex()
-//	mainPane.SetDirection(cview.FlexRow)
-//	mainPane.AddItem(app.ListPanels, 0, 1, true)
-//	mainPane.AddItem(commentDisplay, 0, 1, false)
-//
-//	app.root = cview.NewGrid()
-//	app.root.SetRows(0, 1, 1)
-//	app.root.SetColumns(0)
-//	app.root.SetBackgroundColor(cview.Styles.PrimitiveBackgroundColor)
-//
-//	//app.root.AddItem(app.Cover,0,0,1,1,0,0,false)
-//	app.root.AddItem(mainPane, 0, 0, 1, 1, 0, 0, false)
-//	app.root.AddItem(app.StatusBar, 1, 0, 1, 1, 0, 0, false)
-//	app.root.AddItem(app.DebugBar, 2, 0, 1,1,0,0,false )
-//	//flex := cview.NewFlex()
-//	//flex.SetDirection(cview.FlexRow)
-//	//flex.AddItemAtIndex(0, Cover(), 0, 1, false)
-//	//flex.AddItemAtIndex(1, app.StatusBar, 1, 0, false)
-//
-//	app.ui.SetInputCapture(app.inputHandler)
-//	app.ui.SetRoot(app.root, true)
-//
-//	return &app
-//}
-//

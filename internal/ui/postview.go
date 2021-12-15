@@ -14,7 +14,7 @@ type Post struct {
 }
 
 func NewPost(app *App) *Post {
-	treeRoot := cview.NewTreeNode("root")
+	treeRoot := cview.NewTreeNode("")
 	tree := cview.NewTreeView()
 	tree.SetRoot(treeRoot)
 	return &Post{
@@ -25,7 +25,7 @@ func NewPost(app *App) *Post {
 }
 
 func (p *Post) SetPost(post store.Item) {
-	p.debugBar.SetText(post.Title())
+	p.commentsTree.SetRoot(cview.NewTreeNode(""))
 	p.generateCommentTree(post)
 }
 
@@ -53,13 +53,14 @@ func (p *Post) addCommentNode(post store.Item) *cview.TreeNode {
 
 func (p *Post) renderTree(post store.Item) {
 	treeRoot := cview.NewTreeNode(post.Title())
-	p.commentsTree.SetRoot(treeRoot)
+
 	subscription := p.app.store.Subscribe(post.Kids())
 	for child := range subscription.Updates() {
 		commentNode := p.addCommentNode(child)
 		treeRoot.AddChild(commentNode)
 		p.app.ui.QueueUpdateDraw(func() {})
 	}
+	p.commentsTree.SetRoot(treeRoot)
 }
 
 func treeTextGenerator(post store.Item) string {

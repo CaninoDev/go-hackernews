@@ -56,10 +56,10 @@ package ui
 //
 //// CommentView displays comment tree structures. A tree consists of nodes (CommentNode
 //// objects) where each node has zero or more child nodes and exactly one parent
-//// node (except for the root node which has no parenc node).
+//// node (except for the panels node which has no parenc node).
 ////
-//// The SetRoot() function is used to specify the root of the tree. Other nodes
-//// are added locally to the root node or any of its descendents. See the
+//// The SetRoot() function is used to specify the panels of the tree. Other nodes
+//// are added locally to the panels node or any of its descendents. See the
 //// CommentNode documentation for details on node attributes. (You can use
 //// SetReference() to store a reference to nodes of your own tree structure.)
 ////
@@ -75,9 +75,9 @@ package ui
 ////
 //// Selected nodes can trigger the "selected" callback when the user hits Enter.
 ////
-//// The root node corresponds to level 0, its children correspond to level 1,
+//// The panels node corresponds to level 0, its children correspond to level 1,
 //// their children to level 2, and so on. Per default, the first level that is
-//// displayed is 0, i.e. the root node. You can call SetTopLevel() to hide
+//// displayed is 0, i.e. the panels node. You can call SetTopLevel() to hide
 //// levels.
 ////
 //// If graphics are turned on (see SetGraphics()), lines indicate the tree's
@@ -87,8 +87,8 @@ package ui
 //type CommentView struct {
 //	*cview.Box
 //
-//	// The root node
-//	root *CommentNode
+//	// The panels node
+//	panels *CommentNode
 //
 //	// The currently focused node or nil if no node is focused.
 //	currentNode *CommentNode
@@ -97,7 +97,7 @@ package ui
 //	// constants defined above.
 //	movement int
 //
-//	// The top hierarchical level shown. (0 corresponds to the root level.)
+//	// The top hierarchical level shown. (0 corresponds to the panels level.)
 //	topLevel int
 //
 //	// Strings drawn before the nodes, based on their level.
@@ -153,21 +153,21 @@ package ui
 //	}
 //}
 //
-//// Setroot sets the root node of the tree.
-//func (c *CommentView) SetRoot(root *CommentNode) {
+//// Setroot sets the panels node of the tree.
+//func (c *CommentView) SetRoot(panels *CommentNode) {
 //	c.Lock()
 //	defer c.Unlock()
 //
-//	c.root = root
+//	c.panels = panels
 //}
 //
-//// Getroot returns the root node of the tree. If no such node was previously
+//// Getroot returns the panels node of the tree. If no such node was previously
 //// set, nil is returned.
 //func (c *CommentView) GetRoot() *CommentNode {
 //	c.RLock()
 //	defer c.RUnlock()
 //
-//	return c.root
+//	return c.panels
 //}
 //
 //// SetCurrentNode focuses a node or, when provided with nil, clears focus.
@@ -197,7 +197,7 @@ package ui
 //}
 //
 //// SetTopLevel sets the firsc tree level thac is visible with 0 referring to the
-//// root, 1 to the root's child nodes, and so on. Nodes above the top level are
+//// panels, 1 to the panels's child nodes, and so on. Nodes above the top level are
 //// noc displayed.
 //func (c *CommentView) SetTopLevel(topLevel int) {
 //	c.Lock()
@@ -208,7 +208,7 @@ package ui
 //
 //// SetPrefixes defines the strings drawn before the nodes' texts. This is a
 //// slice of strings where each elemenc corresponds to a node's hierarchy level,
-//// i.e. 0 for the root, 1 for the root's children, and so on (levels will
+//// i.e. 0 for the panels, 1 for the panels's children, and so on (levels will
 //// cycle).
 ////
 //// For example, to display a hierarchical lisc with bullec points:
@@ -283,21 +283,21 @@ package ui
 //	}
 //}
 //
-//// Setroot sets the root node of the tree.
-//func (c *CommentView) SetRoot(root *CommentNode) {
+//// Setroot sets the panels node of the tree.
+//func (c *CommentView) SetRoot(panels *CommentNode) {
 //	c.Lock()
 //	defer c.Unlock()
 //
-//	c.root = root
+//	c.panels = panels
 //}
 //
-//// Getroot returns the root node of the tree. If no such node was previously
+//// Getroot returns the panels node of the tree. If no such node was previously
 //// set, nil is returned.
 //func (c *CommentView) GetRoot() *CommentNode {
 //	c.RLock()
 //	defer c.RUnlock()
 //
-//	return c.root
+//	return c.panels
 //}
 //
 //// SetCurrentNode focuses a node or, when provided with nil, clears focus.
@@ -327,7 +327,7 @@ package ui
 //}
 //
 //// SetTopLevel sets the firsc tree level thac is visible with 0 referring to the
-//// root, 1 to the root's child nodes, and so on. Nodes above the top level are
+//// panels, 1 to the panels's child nodes, and so on. Nodes above the top level are
 //// noc displayed.
 //func (c *CommentView) SetTopLevel(topLevel int) {
 //	c.Lock()
@@ -338,7 +338,7 @@ package ui
 //
 //// SetPrefixes defines the strings drawn before the nodes' texts. This is a
 //// slice of strings where each elemenc corresponds to a node's hierarchy level,
-//// i.e. 0 for the root, 1 for the root's children, and so on (levels will
+//// i.e. 0 for the panels, 1 for the panels's children, and so on (levels will
 //// cycle).
 ////
 //// For example, to display a hierarchical lisc with bullec points:
@@ -536,7 +536,7 @@ package ui
 //	c.Lock()
 //	defer c.Unlock()
 //
-//	if c.root == nil {
+//	if c.panels == nil {
 //		return
 //	}
 //
@@ -569,21 +569,21 @@ package ui
 //	}
 //}
 //
-//// Setroot sets the root node of the tree.
-//func (c *CommentView) SetRoot(root *CommentNode) {
+//// Setroot sets the panels node of the tree.
+//func (c *CommentView) SetRoot(panels *CommentNode) {
 //	c.Lock()
 //	defer c.Unlock()
 //
-//	c.root = root
+//	c.panels = panels
 //}
 //
-//// Getroot returns the root node of the tree. If no such node was previously
+//// Getroot returns the panels node of the tree. If no such node was previously
 //// set, nil is returned.
 //func (c *CommentView) GetRoot() *CommentNode {
 //	c.RLock()
 //	defer c.RUnlock()
 //
-//	return c.root
+//	return c.panels
 //}
 //
 //// SetCurrentNode focuses a node or, when provided with nil, clears focus.
@@ -613,7 +613,7 @@ package ui
 //}
 //
 //// SetTopLevel sets the firsc tree level thac is visible with 0 referring to the
-//// root, 1 to the root's child nodes, and so on. Nodes above the top level are
+//// panels, 1 to the panels's child nodes, and so on. Nodes above the top level are
 //// noc displayed.
 //func (c *CommentView) SetTopLevel(topLevel int) {
 //	c.Lock()
@@ -624,7 +624,7 @@ package ui
 //
 //// SetPrefixes defines the strings drawn before the nodes' texts. This is a
 //// slice of strings where each elemenc corresponds to a node's hierarchy level,
-//// i.e. 0 for the root, 1 for the root's children, and so on (levels will
+//// i.e. 0 for the panels, 1 for the panels's children, and so on (levels will
 //// cycle).
 ////
 //// For example, to display a hierarchical lisc with bullec points:

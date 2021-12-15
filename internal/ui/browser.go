@@ -21,8 +21,9 @@ type Browser struct {
 
 type listState struct {
 	*cview.List
-	ids              []int
-	currentPageIndex int
+	ids               []int
+	currentPageIndex  int
+	lastSelectedIndex int
 }
 
 func NewBrowser(app *App) *Browser {
@@ -48,18 +49,34 @@ func (b *Browser) initializeTabbedLists() {
 		list.SetPadding(1, 1, 0, 0)
 		list.SetHighlightFullLine(false)
 		list.SetSelectedFunc(b.listItemHandler)
+		list.SetPadding(0, 0, 1, 1)
+		list.Set
+		list.SetBorder(true)
 		b.states[tabLabel] = &listState{
-			List:             list,
-			ids:              b.app.store.Collection(tabLabel),
-			currentPageIndex: 0,
+			List:              list,
+			ids:               b.app.store.Collection(tabLabel),
+			currentPageIndex:  0,
+			lastSelectedIndex: 0,
 		}
 		b.lists.AddTab(tabLabel, tabLabel, b.states[tabLabel])
 	}
-
+	b.lists.SetTabSwitcherAfterContent(true)
+	b.lists.SetChangedFunc(b.tabsHandler)
 }
 
-func (b *Browser) listItemHandler(_ int, listItem *cview.ListItem) {
+func (b *Browser) tabsHandler() {
+	b.currentTab = b.lists.GetCurrentTab()
+	if b.states[b.currentTab].lastSelectedIndex != 0 {
+		b.states[b.currentTab].SetCurrentItem(b.states[b.currentTab].lastSelectedIndex)
+	}
+}
+func (b *Browser) listItemHandler(selectedItemIndex int, listItem *cview.ListItem) {
+	currentTab := b.lists.GetCurrentTab()
 	post := listItem.GetReference().(store.Item)
+	b.states[currentTab].lastSelectedIndex = selectedItemIndex
+	b.app.store.SetItemReadStamp(post.ID())
+	b.app.post.SetPost(post)
+	b.app.panels.SetCurrentPanel("post")
 	b.debugBar.SetText(post.Title())
 }
 
@@ -68,8 +85,8 @@ func (b *Browser) populateList() {
 
 	pagedBatch, totalPages := b.paginate(currentTab)
 
-	tabLabel := fmt.Sprintf("%s(%d/%d)", currentTab, b.states[currentTab].currentPageIndex, totalPages)
-	b.lists.SetTabLabel(currentTab, tabLabel)
+	paginationInfo := fmt.Sprintf("(%d/%d)", b.states[currentTab].currentPageIndex+1, totalPages)
+	b.app.statusBar.SetText(paginationInfo)
 	b.statusBar.SetMax(len(pagedBatch) - 1)
 	b.states[currentTab].Clear()
 	for _, id := range pagedBatch {
