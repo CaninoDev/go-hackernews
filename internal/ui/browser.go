@@ -55,7 +55,7 @@ func (b *Browser) initializeTabbedLists() {
 		}
 		b.lists.AddTab(tabLabel, tabLabel, b.states[tabLabel])
 	}
-	//b.lists.SetChangedFunc(b.populateList)
+
 }
 
 func (b *Browser) listItemHandler(_ int, listItem *cview.ListItem) {
@@ -66,8 +66,10 @@ func (b *Browser) listItemHandler(_ int, listItem *cview.ListItem) {
 func (b *Browser) populateList() {
 	currentTab := b.lists.GetCurrentTab()
 
-	pagedBatch := b.paginate(currentTab)
+	pagedBatch, totalPages := b.paginate(currentTab)
 
+	tabLabel := fmt.Sprintf("%s(%d/%d)", currentTab, b.states[currentTab].currentPageIndex, totalPages)
+	b.lists.SetTabLabel(currentTab, tabLabel)
 	b.statusBar.SetMax(len(pagedBatch) - 1)
 	b.states[currentTab].Clear()
 	for _, id := range pagedBatch {
@@ -87,7 +89,7 @@ func (b *Browser) populateList() {
 	}
 }
 
-func (b *Browser) paginate(currentTab string) []int {
+func (b *Browser) paginate(currentTab string) ([]int, int) {
 
 	_, _, _, screenHeight := b.lists.GetInnerRect()
 
@@ -95,7 +97,9 @@ func (b *Browser) paginate(currentTab string) []int {
 	b.debugBar.SetText(fmt.Sprintf("screenheight: %d, listlength: %d", screenHeight, listLength))
 	totalPostCount := len(b.states[currentTab].ids)
 
-	startIndex := (totalPostCount / listLength) * b.states[currentTab].currentPageIndex
+	totalPageCount := math.Ceil(float64(totalPostCount) / float64(listLength))
+
+	startIndex := int(totalPageCount) * b.states[currentTab].currentPageIndex
 	var lastIndex int
 	if (startIndex + listLength) > len(b.states[currentTab].ids) {
 		lastIndex = len(b.states[currentTab].ids) - 1
@@ -103,7 +107,7 @@ func (b *Browser) paginate(currentTab string) []int {
 		lastIndex = startIndex + listLength
 	}
 	listBatch := b.states[currentTab].ids[startIndex:(lastIndex)]
-	return listBatch
+	return listBatch, int(totalPageCount)
 }
 
 func (b *Browser) pageNav(next bool) {
