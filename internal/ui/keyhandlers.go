@@ -18,8 +18,8 @@ import (
 //	for _, endpoint := range api.AllEndPoints() {
 //		endpointRune := []rune(strings.ToLower(endpoint.String()[0:1]))[0]
 //		bindingCfg.SetRune(tcell.ModNone, endpointRune, func(event *tcell.EventKey) *tcell.EventKey {
-//			//a.browser.debugBar.SetText(endpoint.String())
-//			a.browser.lists.SetCurrentTab(endpoint.String())
+//			//a.listView.debugBar.SetText(endpoint.String())
+//			a.listView.tabbedLists.SetCurrentTab(endpoint.String())
 //			return nil
 //		})
 //	}
@@ -38,11 +38,19 @@ func (a *App) quit(_ *tcell.EventKey) *tcell.EventKey {
 func (a *App) handleToggle() *tcell.EventKey {
 	panel, _ := a.panels.GetFrontPanel()
 
-	a.browser.debugBar.SetText(panel)
-	if panel == "post" {
-		a.panels.SetCurrentPanel("browser")
+	if panel == POSTPANEL {
+		switchPanel := func() {
+			a.panels.SetCurrentPanel(LISTPANEL)
+			currentTab := a.listView.tabbedLists.GetCurrentTab()
+			a.ui.SetFocus(a.listView.states[currentTab])
+		}
+		a.ui.QueueUpdateDraw(switchPanel)
 	} else {
-		a.panels.SetCurrentPanel("post")
+		switchPanel := func() {
+			a.panels.SetCurrentPanel(POSTPANEL)
+			a.ui.SetFocus(a.postView.content)
+		}
+		a.ui.QueueUpdateDraw(switchPanel)
 	}
 	return nil
 }
@@ -57,34 +65,28 @@ func (a *App) initializeInputHandler(panes ...cview.Primitive) {
 func (a *App) inputHandler(event *tcell.EventKey) *tcell.EventKey {
 	switch event.Key() {
 	case tcell.KeyEscape:
-		a.ui.Stop()
+		a.quit(event)
 	case tcell.KeyTab:
 		a.handleToggle()
 	case tcell.KeyCtrlN:
-		a.browser.currentTab = api.New.String()
-		a.browser.lists.SetCurrentTab(api.New.String())
+		a.listView.tabbedLists.SetCurrentTab(api.New.String())
 	case tcell.KeyCtrlJ:
-		a.browser.currentTab = api.Jobs.String()
-		a.browser.lists.SetCurrentTab(api.Jobs.String())
+		a.listView.tabbedLists.SetCurrentTab(api.Jobs.String())
 	case tcell.KeyCtrlT:
-		a.browser.currentTab = api.Top.String()
-		a.browser.lists.SetCurrentTab(api.Top.String())
+		a.listView.tabbedLists.SetCurrentTab(api.Top.String())
 	case tcell.KeyCtrlB:
-		a.browser.currentTab = api.Best.String()
-		a.browser.lists.SetCurrentTab(api.Best.String())
+		a.listView.tabbedLists.SetCurrentTab(api.Best.String())
 	case tcell.KeyCtrlS:
-		a.browser.currentTab = api.Show.String()
-		a.browser.lists.SetCurrentTab(api.Show.String())
+		a.listView.tabbedLists.SetCurrentTab(api.Show.String())
 	case tcell.KeyCtrlA:
-		a.browser.currentTab = api.Ask.String()
-		a.browser.lists.SetCurrentTab(api.Ask.String())
+		a.listView.tabbedLists.SetCurrentTab(api.Ask.String())
 	case tcell.KeyCtrlP:
-		a.browser.pageNav(false)
+		a.listView.pageNav(false)
 	case tcell.KeyCtrlL:
-		a.browser.pageNav(true)
+		a.listView.pageNav(true)
 	default:
 		return event
 	}
-	go a.browser.populateList()
+	go a.listView.populateList()
 	return event
 }

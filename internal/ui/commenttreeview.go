@@ -1,5 +1,6 @@
 package ui
 
+// Hey...
 //
 //import (
 //	"code.rocketnine.space/tslocum/cview"
@@ -83,7 +84,7 @@ package ui
 //// If graphics are turned on (see SetGraphics()), lines indicate the tree's
 //// hierarchy. Alternative (or additionally), you can set differenc prefixes
 //// using SetPrefixes() for different levels, for example to display hierarchical
-//// bullet point lists.
+//// bullet point tabbedLists.
 //type CommentView struct {
 //	*cview.Box
 //

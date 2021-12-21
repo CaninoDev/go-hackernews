@@ -1,9 +1,15 @@
 package ui
 
 import (
+	"log"
+
 	"code.rocketnine.space/tslocum/cview"
 	"github.com/CaninoDev/go-hackernews/internal/store"
-	"log"
+)
+
+var (
+	LISTPANEL = "listView"
+	POSTPANEL = "postView"
 )
 
 type App struct {
@@ -13,30 +19,29 @@ type App struct {
 	statusBar    *cview.TextView
 	panels       *cview.Panels
 	Cover        *cview.Flex
-	browser      *Browser
-	post         *Post
+	listView     *TabbedLists
+	postView     *Post
 }
 
 func New() (*App, error) {
 	app := &App{}
 	app.ui = cview.NewApplication()
 
-	store, err := store.New()
+	cache, err := store.New()
 	if err != nil {
 		return &App{}, err
 	}
 
-	app.store = store
+	app.store = cache
 
-	app.browser = NewBrowser(app)
-	app.post = NewPost(app)
+	app.listView = NewTabbedLists(app)
+	app.postView = NewPost(app)
 	app.statusBar = cview.NewTextView()
 
 	return app, nil
 }
 
 func (a *App) Start() error {
-
 	headerLine := a.initializeHeader()
 	a.panels = a.initializePanels()
 
@@ -49,8 +54,6 @@ func (a *App) Start() error {
 	a.ui.SetInputCapture(a.inputHandler)
 	a.ui.SetRoot(rootGrid, true)
 
-	a.initializeData()
-
 	err := a.ui.Run()
 	if err != nil {
 		return err
@@ -58,26 +61,27 @@ func (a *App) Start() error {
 	return nil
 }
 
-func (a *App) initializeHeader() *cview.Grid {
+func (a *App) initializeHeader() *cview.Flex {
 	logo := initializeLogo()
 	emptyBar := cview.NewTextView()
+
 	a.statusBar = cview.NewTextView()
+	a.statusBar.SetTextAlign(cview.AlignRight)
 
-	grid := cview.NewGrid()
-	grid.SetBackgroundColor(cview.Styles.PrimitiveBackgroundColor)
-	grid.SetBackgroundTransparent(false)
-	grid.SetRows(0)
-	grid.SetColumns(13, 0, 9)
-	grid.AddItem(logo, 1, 1, 1, 1, 1, 0, false)
-	grid.AddItem(emptyBar, 1, 2, 1, 1, 1, 0, false)
-	grid.AddItem(a.statusBar, 1, 3, 1, 1, 1, 0, false)
+	flex := cview.NewFlex()
+	flex.SetDirection(cview.FlexColumn)
+	flex.AddItem(logo, 0, 1, false)
+	flex.AddItem(emptyBar, 0, 6, false)
+	flex.AddItem(a.statusBar, 0, 1, false)
 
-	return grid
+	return flex
 }
 
 func initializeLogo() *cview.TextView {
 	textView := cview.NewTextView()
 	textView.SetDynamicColors(true)
+	textView.SetTextAlign(cview.AlignLeft)
+
 	textView.SetText("[:#ff6600:b]Y[-:-:] Hacker News")
 	return textView
 }
@@ -86,46 +90,59 @@ func (a *App) initializePanels() *cview.Panels {
 	if err := a.ui.Init(); err != nil {
 		log.Print(err)
 	}
-	browserPanel := a.initializeBrowserLayout()
-	postPanel := a.initializePostLayout()
+	browserPanel := a.initializeTabbedListsLayout()
+	postPanel := a.initializeItemContentLayout()
 
 	panels := cview.NewPanels()
 	panels.SetBackgroundColor(cview.Styles.PrimitiveBackgroundColor)
 	panels.SetBackgroundTransparent(false)
-	panels.AddPanel("post", postPanel, true, false)
-	panels.AddPanel("browser", browserPanel, true, true)
+
+	panels.AddPanel(POSTPANEL, postPanel, true, false)
+	panels.AddPanel(LISTPANEL, browserPanel, true, true)
+
+	panels.SetChangedFunc(a.changedPanelsHandler)
 
 	a.initializeInputHandler(browserPanel, postPanel)
+
 	return panels
 }
 
-func (a *App) initializeBrowserLayout() *cview.Grid {
-	a.browser.initializeTabbedLists()
+func (a *App) initializeTabbedListsLayout() *cview.Grid {
+	a.listView.initializeTabbedLists()
 
 	grid := cview.NewGrid()
 	grid.SetBackgroundTransparent(false)
 	grid.SetBackgroundColor(cview.Styles.PrimitiveBackgroundColor)
-	grid.SetRows(0, 1)
-	grid.SetColumns(0, 0)
-	grid.AddItem(a.browser.lists, 0, 0, 1, 2, 1, 1, true)
-	grid.AddItem(a.browser.debugBar, 1, 0, 1, 1, 1, 1, false)
-	grid.AddItem(a.browser.statusBar, 1, 1, 1, 1, 1, 1, false)
 
-	return grid
-}
-
-func (a *App) initializePostLayout() *cview.Grid {
-	grid := cview.NewGrid()
-	grid.SetBackgroundTransparent(false)
-	grid.SetBackgroundColor(cview.Styles.PrimitiveBackgroundColor)
 	grid.SetRows(0, 1)
 	grid.SetColumns(0)
-	grid.AddItem(a.post.commentsTree, 0, 0, 1, 1, 0, 0, true)
-	grid.AddItem(a.post.debugBar, 1, 0, 1, 1, 0, 0, false)
+
+	grid.AddItem(a.listView.tabbedLists, 0, 0, 1, 2, 1, 1, true)
+	grid.AddItem(a.listView.statusBar, 1, 0, 1, 1, 1, 1, false)
 
 	return grid
 }
 
-func (a *App) initializeData() {
-	//a.browser.populate()
+func (a *App) initializeItemContentLayout() *cview.Grid {
+	grid := cview.NewGrid()
+	grid.SetBackgroundTransparent(false)
+	grid.SetBackgroundColor(cview.Styles.PrimitiveBackgroundColor)
+
+	grid.SetRows(0, 0, 1)
+	grid.SetColumns(0)
+
+	grid.AddItem(a.postView.content, 0, 0, 1, 1, 0, 0, false)
+	grid.AddItem(a.postView.commentsTree, 1, 0, 1, 1, 0, 0, false)
+	grid.AddItem(a.postView.debugBar, 2, 0, 1, 1, 0, 0, false)
+	return grid
+}
+
+func (a *App) changedPanelsHandler() {
+	currentTab := a.listView.tabbedLists.GetCurrentTab()
+
+	lastSelectedItemIndex := a.listView.states[currentTab].lastSelectedItemIndex
+	if lastSelectedItemIndex != 0 {
+		a.listView.states[currentTab].SetCurrentItem(lastSelectedItemIndex)
+		a.ui.QueueUpdateDraw(func() {})
+	}
 }

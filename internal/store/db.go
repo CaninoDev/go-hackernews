@@ -4,17 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/CaninoDev/go-hackernews/internal/api"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/CaninoDev/go-hackernews/internal/api"
 )
 
 type Store struct {
 	fb            *api.FirebaseClient
 	items         map[int]Item
 	idCollections map[api.EndPoint][]int
-	mutex         sync.RWMutex
+	sync.RWMutex
 }
 
 func New() (*Store, error) {
@@ -42,13 +43,12 @@ func (s *Store) Item(id int) (Item, error) {
 	return s.item(id)
 }
 
-func (s *Store) SetItemReadStamp(id int) error {
-	if _, ok := s.items[id]; ok {
-		s.items[id].SetReadStamp()
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("Item id: %d not found", id))
-	}
+func (s *Store) SetItemReadStamp(item *Item) {
+	s.Lock()
+	defer s.Unlock()
+
+	item.SetReadStamp()
+	s.items[item.ID()] = *item
 }
 
 func (s *Store) GetItemReadStamp(id int) (time.Time, error) {
@@ -88,6 +88,8 @@ func (s *Store) cacheCollections() {
 }
 
 func (s *Store) item(id int) (Item, error) {
+	s.Lock()
+	defer s.Unlock()
 	if val, ok := s.items[id]; ok {
 		return val, nil
 	} else {
