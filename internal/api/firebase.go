@@ -18,8 +18,8 @@ const (
 type EndPoint int
 
 const (
-	New EndPoint = iota
-	Top
+	Top EndPoint = iota
+	New
 	Best
 	Ask
 	Show
@@ -27,8 +27,8 @@ const (
 )
 
 var endPointURL = map[EndPoint]string{
-	New:  "newstories",
 	Top:  "topstories",
+	New:  "newstories",
 	Best: "beststories",
 	Ask:  "askstories",
 	Show: "showstories",
@@ -36,8 +36,8 @@ var endPointURL = map[EndPoint]string{
 }
 
 var toEndPoint = map[string]EndPoint{
-	"New":  New,
 	"Top":  Top,
+	"New":  New,
 	"Best": Best,
 	"Ask":  Ask,
 	"Show": Show,
