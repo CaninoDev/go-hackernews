@@ -70,9 +70,9 @@ func (a *App) initializeHeader() *cview.Flex {
 
 	flex := cview.NewFlex()
 	flex.SetDirection(cview.FlexColumn)
-	flex.AddItem(logo, 0, 1, false)
+	flex.AddItem(logo, 13, 1, false)
 	flex.AddItem(emptyBar, 0, 6, false)
-	flex.AddItem(a.statusBar, 0, 1, false)
+	flex.AddItem(a.statusBar, 13, 1, false)
 
 	return flex
 }
