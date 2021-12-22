@@ -38,20 +38,21 @@ func (a *App) quit(_ *tcell.EventKey) *tcell.EventKey {
 func (a *App) handleToggle() *tcell.EventKey {
 	panel, _ := a.panels.GetFrontPanel()
 
-	if panel == POSTPANEL {
-		switchPanel := func() {
-			a.panels.SetCurrentPanel(LISTPANEL)
-			currentTab := a.listView.tabbedLists.GetCurrentTab()
-			a.ui.SetFocus(a.listView.states[currentTab])
-		}
-		a.ui.QueueUpdateDraw(switchPanel)
-	} else {
-		switchPanel := func() {
+	cycleFocus := func() {
+		if panel == POSTPANEL {
+			if a.postView.content.HasFocus() {
+				a.ui.SetFocus(a.postView.commentsTree)
+			} else {
+				a.panels.SetCurrentPanel(LISTPANEL)
+			}
+		} else {
 			a.panels.SetCurrentPanel(POSTPANEL)
 			a.ui.SetFocus(a.postView.content)
 		}
-		a.ui.QueueUpdateDraw(switchPanel)
 	}
+
+	a.ui.QueueUpdateDraw(cycleFocus)
+
 	return nil
 }
 
