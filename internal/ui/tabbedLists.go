@@ -175,10 +175,10 @@ func (t *TabbedLists) populateList() {
 // the batch of ids from the current state of the list index,
 // and the total number of screens(pages) it will take to render the entire list.
 func (t *TabbedLists) paginate(currentTab string) ([]int, int) {
-	_, _, _, screenHeight := t.tabbedLists.GetInnerRect()
+	_, _, _, rectHeight := t.tabbedLists.GetInnerRect()
 
-	listLength := screenHeight - 2
-	// t.app.statusBar.SetText(fmt.Sprintf("screenheight: %d, listlength: %d", screenHeight, listLength))
+	listLength := rectHeight - 3
+	// t.app.statusBar.SetText(fmt.Sprintf("screenheight: %d, listlength: %d", rectHeight, listLength))
 	totalPostCount := len(t.states[currentTab].itemIDs)
 
 	totalPageCount := math.Ceil(float64(totalPostCount) / float64(listLength))
