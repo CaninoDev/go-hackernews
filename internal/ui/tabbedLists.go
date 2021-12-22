@@ -12,6 +12,13 @@ import (
 	"github.com/CaninoDev/go-hackernews/internal/store"
 )
 
+type Nav int
+
+const (
+	prev Nav = iota
+	next
+)
+
 // TabbedList contains the various primitives and states necessary to
 // provide a set of tabbed lists of posts.
 type TabbedLists struct {
@@ -194,43 +201,49 @@ func (t *TabbedLists) paginate(currentTab string) ([]int, int) {
 	return listBatch, int(totalPageCount)
 }
 
-// pageNav will trigger the visible list to the next page of available items
+// pageNav will trigger the visible list to the nav page of available items (true)
 // or the prior page based on the provided flag.
-func (t *TabbedLists) pageNav(next bool) {
+func (t *TabbedLists) pageNav(nav Nav) {
 	currentTab := t.tabbedLists.GetCurrentTab()
 
-	oldCurrentIndex := t.states[currentTab].currentPageIndex
+	// Capture the current state of the list
+	currentPageIndex := &t.states[currentTab].currentPageIndex
 	listLength := t.states[currentTab].GetItemCount()
 	totalPostCount := len(t.states[currentTab].itemIDs)
 	maxIndex := int(math.Ceil(float64(totalPostCount) / float64(listLength)))
 
-	if next {
-		if oldCurrentIndex >= maxIndex {
-			lastItemIndex := t.states[currentTab].GetItemCount() - 1
+	switch nav {
+	case next:
+		// If we are on the last page, select the last item on the list. Otherwise
+		// repopulate the list with the contents of the next page.
+		if *currentPageIndex >= maxIndex {
+			lastItemIndex := t.states[currentTab].GetItemCount()
 			t.states[currentTab].SetCurrentItem(lastItemIndex)
 		} else {
-			t.states[currentTab].currentPageIndex++
-			go t.populateList()
+			*currentPageIndex++
+			t.populateList()
 		}
-	} else {
-		if oldCurrentIndex == 1 {
-			t.states[currentTab].SetCurrentItem(1)
+	case prev:
+		// If we are on the first page, select the first item on the list. Otherwise
+		// repopulate list with the contents of the previous page.
+		if *currentPageIndex == 0 {
+			t.states[currentTab].SetCurrentItem(0)
 		} else {
-			t.states[currentTab].currentPageIndex--
-			go t.populateList()
+			*currentPageIndex--
+			t.populateList()
 		}
 	}
 
-	t.app.statusBar.SetText(
-		fmt.Sprintf(
-			"Items[#CurrentList:%d -- #TotalItems:%d] Pages[Old:%d -- New:%d -- TotalPages:%d]",
-			listLength,
-			len(t.states[currentTab].itemIDs),
-			oldCurrentIndex,
-			t.states[currentTab].currentPageIndex,
-			maxIndex,
-		),
-	)
+	//t.app.statusBar.SetText(
+	//	fmt.Sprintf(
+	//		"Items[#CurrentList:%d -- #TotalItems:%d] Pages[Old:%d -- New:%d -- TotalPages:%d]",
+	//		listLength,
+	//		len(t.states[currentTab].itemIDs),
+	//		*currentPageIndex,
+	//		t.states[currentTab].currentPageIndex,
+	//		maxIndex,
+	//	),
+	//)
 }
 
 // formatPrimaryLine will return a formmatted string for the item's title

@@ -81,9 +81,9 @@ func (a *App) inputHandler(event *tcell.EventKey) *tcell.EventKey {
 	case tcell.KeyCtrlA:
 		a.listView.tabbedLists.SetCurrentTab(api.Ask.String())
 	case tcell.KeyCtrlP:
-		a.listView.pageNav(false)
+		a.listView.pageNav(prev)
 	case tcell.KeyCtrlL:
-		a.listView.pageNav(true)
+		a.listView.pageNav(next)
 	default:
 		return event
 	}
