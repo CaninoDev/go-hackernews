@@ -37,7 +37,7 @@ func New() (*App, error) {
 	app.store = cache
 
 	app.listView = NewTabbedLists(app)
-	app.postView = NewPost(app)
+	app.postView = NewPostView(app)
 	app.statusBar = cview.NewTextView()
 
 	app.ui.SetAfterResizeFunc(app.resizeHandler)

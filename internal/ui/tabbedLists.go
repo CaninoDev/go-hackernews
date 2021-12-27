@@ -65,8 +65,8 @@ func (t *TabbedLists) initializeTabbedLists() {
 		list.SetPadding(1, 1, 1, 1)
 		list.SetCompact(true)
 		list.SetScrollBarVisibility(cview.ScrollBarNever)
-		list.SetSelectedAlwaysCentered(false)
 		list.SetChangedFunc(t.listChangedHandler)
+		list.ShowSecondaryText(false)
 		t.states[tabLabel] = &listState{
 			List:                  list,
 			itemIDs:               t.app.store.Collection(tabLabel),
@@ -81,21 +81,10 @@ func (t *TabbedLists) initializeTabbedLists() {
 	// t.tabbedLists.SetChangedFunc(t.tabsHandler)
 }
 
+// Record the last highlighted item.
 func (t *TabbedLists) listChangedHandler(idx int, _ *cview.ListItem) {
-	t.setLastSelectedItemIndex(idx)
+	// t.setLastSelectedItemIndex(idx)
 }
-
-//func (t *TabbedLists) tabsHandler() {
-//	t.app.ui.QueueUpdateDraw(func() {
-//		currentTab := t.tabbedLists.GetCurrentTab()
-//		listItemCount := t.states[currentTab].GetItemCount()
-//		lastSelectedIndex := t.states[currentTab].lastSelectedItemIndex
-//
-//		if listItemCount > 0 && lastSelectedIndex != 0 {
-//			t.states[currentTab].SetCurrentItem(lastSelectedIndex)
-//		}
-//	})
-//}
 
 // setSLastSelectedItemIndex records the last selected item index.
 func (t *TabbedLists) setLastSelectedItemIndex(idx int) {
@@ -201,6 +190,7 @@ func (t *TabbedLists) resizeListItems(width int) {
 		}
 	}
 }
+
 // paginate calculates the length of the list that can be displayed on the screen,
 // the batch of ids from the current state of the list index,
 // and the total number of screens(pages) it will take to render the entire list.
@@ -208,6 +198,10 @@ func (t *TabbedLists) paginate(currentTab string) ([]int, int) {
 	_, _, _, rectHeight := t.tabbedLists.GetInnerRect()
 
 	listLength := rectHeight - 3
+	if !t.states[currentTab].GetCompact() {
+		listLength /= 2
+	}
+
 	// t.app.statusBar.SetText(fmt.Sprintf("screenheight: %d, listlength: %d", rectHeight, listLength))
 	totalPostCount := len(t.states[currentTab].itemIDs)
 

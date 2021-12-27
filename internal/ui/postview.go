@@ -22,7 +22,7 @@ type Post struct {
 	sync.RWMutex
 }
 
-func NewPost(app *App) *Post {
+func NewPostView(app *App) *Post {
 	tree := cview.NewTreeView()
 	treeRoot := cview.NewTreeNode("")
 	tree.SetRoot(treeRoot)
