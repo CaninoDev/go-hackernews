@@ -21,6 +21,8 @@ type App struct {
 	Cover        *cview.Flex
 	listView     *TabbedLists
 	postView     *Post
+	width        int
+	height       int
 }
 
 func New() (*App, error) {
@@ -38,6 +40,7 @@ func New() (*App, error) {
 	app.postView = NewPost(app)
 	app.statusBar = cview.NewTextView()
 
+	app.ui.SetAfterResizeFunc(app.resizeHandler)
 	return app, nil
 }
 
@@ -54,6 +57,7 @@ func (a *App) Start() error {
 	a.ui.SetInputCapture(a.inputHandler)
 	a.ui.SetRoot(rootGrid, true)
 
+	a.width, a.height = a.ui.GetScreenSize()
 	err := a.ui.Run()
 	if err != nil {
 		return err
@@ -144,5 +148,18 @@ func (a *App) changedPanelsHandler() {
 	if lastSelectedItemIndex != 0 {
 		a.listView.states[currentTab].SetCurrentItem(lastSelectedItemIndex)
 		a.ui.QueueUpdateDraw(func() {})
+	}
+}
+func (a *App) resizeHandler(width, height int) {
+	oldWidth := a.width
+	oldHeight := a.height
+	if a.listView.tabbedLists.HasFocus() {
+		if oldHeight == height && oldWidth != width {
+			a.width = width
+			a.listView.resizeListItems(width)
+		} else if oldHeight != height {
+			a.width = width
+			a.listView.populateList()
+		}
 	}
 }

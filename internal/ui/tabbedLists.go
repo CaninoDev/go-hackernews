@@ -36,6 +36,7 @@ type listState struct {
 	itemIDs               []int
 	currentPageIndex      int
 	lastSelectedItemIndex int
+	maxListItemWidth      int
 }
 
 // NewTabbedLists returns a TabbedList with an
@@ -110,15 +111,13 @@ func (t *TabbedLists) setLastSelectedItemIndex(idx int) {
 // read, loads the comment tree and viewer, and switches over to the postView view panel.
 func (t *TabbedLists) listItemHandler(selectedItemIndex int, listItem *cview.ListItem) {
 	post := listItem.GetReference().(store.Item)
-
+	_, _, w, _ := t.tabbedLists.GetInnerRect()
 	setReadTimeStamp := func() {
-
 		t.app.store.SetItemReadStamp(&post)
 
 		listItem.SetReference(post)
-
-		listItem.SetMainText(formatReadPostLine(post))
-
+		fmtStr, _ := formatReadPostLine(post, w)
+		listItem.SetMainText(fmtStr)
 	}
 
 	t.app.ui.QueueUpdateDraw(setReadTimeStamp)
@@ -136,6 +135,8 @@ func (t *TabbedLists) populateList() {
 
 	renderList := func() {
 		paginationInfo := fmt.Sprintf("(%d/%d)", t.states[currentTab].currentPageIndex+1, totalPages)
+
+		width := t.app.width
 
 		clearList := func() {
 			t.app.statusBar.SetText(paginationInfo)
@@ -155,7 +156,14 @@ func (t *TabbedLists) populateList() {
 			if err != nil {
 				t.app.statusBar.SetText(fmt.Sprintf("%v", err))
 			}
-			listItem := cview.NewListItem(formatPrimaryLine(post))
+
+			fmtStr, maxLenStr := formatPrimaryLine(post, width)
+
+			listItem := cview.NewListItem(fmtStr)
+			if t.states[currentTab].maxListItemWidth < maxLenStr {
+				t.states[currentTab].maxListItemWidth = maxLenStr
+			}
+
 			listItem.SetReference(post)
 
 			// addItem adds the item to the current list and updates the progress bar.
@@ -167,7 +175,6 @@ func (t *TabbedLists) populateList() {
 		}
 
 		if t.statusBar.Complete() {
-
 			t.app.ui.QueueUpdateDraw(resetProgressBar)
 		}
 	}
@@ -178,6 +185,22 @@ func (t *TabbedLists) populateList() {
 	}
 }
 
+func (t *TabbedLists) resizeListItems(width int) {
+	currentTab := t.tabbedLists.GetCurrentTab()
+	if width < t.states[currentTab].maxListItemWidth {
+		listItemCount := t.states[currentTab].GetItemCount()
+		for i := 0; i < listItemCount; i++ {
+			listItem := t.states[currentTab].GetItem(i)
+			postRef := listItem.GetReference()
+			post := postRef.(store.Item)
+			fmtStr, _ := formatPrimaryLine(post, width)
+			resizeListItemText := func() {
+				listItem.SetMainText(fmtStr)
+			}
+			t.app.ui.QueueUpdateDraw(resizeListItemText)
+		}
+	}
+}
 // paginate calculates the length of the list that can be displayed on the screen,
 // the batch of ids from the current state of the list index,
 // and the total number of screens(pages) it will take to render the entire list.
@@ -248,70 +271,145 @@ func (t *TabbedLists) pageNav(nav Nav) {
 
 // formatPrimaryLine will return a formmatted string for the item's title
 // based on various attributes.
-func formatPrimaryLine(post store.Item) string {
+func formatPrimaryLine(post store.Item, terminal_width int) (string, int) {
 	if post.GetReadStamp() != time.Unix(0, 0) {
-		return formatReadPostLine(post)
+		return formatReadPostLine(post, terminal_width)
 	} else {
-		return formatUnreadPostLine(post)
+		return formatUnreadPostLine(post, terminal_width)
 	}
 }
 
 // formatReadPostLine will format the postView's title string if tagged as read.
-func formatReadPostLine(post store.Item) string {
+func formatReadPostLine(post store.Item, tWidth int) (string, int) {
 	link, err := url.Parse(post.URL())
 	if err != nil {
 		log.Print(err)
 	}
 
+	var pLen int
 	points := formatPoints(post.Score())
 
-	if len(link.Host) > 0 {
-		return fmt.Sprintf("[-:-:d]%s (%s) [::-]by %s -- %s", post.Title(), link.Host, post.By(), points)
+	if post.Score() <= 1 {
+		pLen = 7
+	} else if pLen <= 9 {
+		pLen = 8
 	} else {
-		return fmt.Sprintf("[-:-:d]%s [::-]by %s -- %s", post.Title(), post.By(), points)
+		pLen = 9
+	}
+
+	pBy := len(post.By())
+	pTitle := len(post.Title())
+
+	if len(link.Host) > 0 {
+		pHost := len(link.Host)
+		eWidth := 11 + pHost + pBy + pLen
+		stringLength := eWidth + pTitle
+		if stringLength > tWidth {
+			oSpaces := stringLength - tWidth
+			if oSpaces < 3 {
+				oSpaces = 3
+			}
+			oldTitle := post.Title()
+			truncatedTitle := oldTitle[:(pTitle-oSpaces)] + "..."
+			return fmt.Sprintf("[-:-:d]%s (%s) [::-]by %s -- %s", truncatedTitle, link.Host, post.By(), points), stringLength
+		} else {
+			return fmt.Sprintf("[-:-:d]%s (%s) [::-]by %s -- %s", post.Title(), link.Host, post.By(), points), stringLength
+		}
+	} else {
+		eWidth := 8 + pBy + pLen
+		stringLength := eWidth + pTitle
+		if stringLength > tWidth {
+			oSpaces := tWidth - eWidth
+			if oSpaces < 3 {
+				oSpaces = 3
+			}
+			oldTitle := post.Title()
+			truncatedTitle := oldTitle[:oSpaces] + "..."
+			return fmt.Sprintf("[-:-:d]%s [::-]by %s -- %s", truncatedTitle, post.By(), points), stringLength
+		}
+		return fmt.Sprintf("[-:-:d]%s [::-]by %s -- %s", post.Title(), post.By(), points), stringLength
 	}
 }
 
 // formatReadPostLine will format the postView's title string if items was unread.
-func formatUnreadPostLine(post store.Item) string {
+func formatUnreadPostLine(post store.Item, tWidth int) (string, int) {
 	link, err := url.Parse(post.URL())
 	if err != nil {
 		log.Print(err)
 	}
 
+	var pLen int
 	points := formatPoints(post.Score())
 
-	if len(link.Host) > 0 {
-		return fmt.Sprintf("[::b]%s [::-](%s) by %s -- %s", post.Title(), link.Host, post.By(), points)
+	if post.Score() <= 1 {
+		pLen = 7
+	} else if post.Score() <= 9 {
+		pLen = 8
 	} else {
-		return fmt.Sprintf("[::b]%s [::-]by %s -- %s", post.Title(), post.By(), points)
+		pLen = 9
+	}
+
+	pBy := len(post.By())
+	pTitle := len(post.Title())
+
+	if len(link.Host) > 0 {
+		pHost := len(link.Host)
+		eWidth := pHost + pBy + pLen + 16
+		stringLength := eWidth + pTitle
+		if stringLength > tWidth {
+			oSpaces := stringLength - tWidth
+			if oSpaces < 3 {
+				oSpaces = 3
+			}
+			oldTitle := post.Title()
+			title := oldTitle[:(pTitle-oSpaces)] + "..."
+			return fmt.Sprintf("[-:-:b]%s (%s) [::-]by %s -- %s", title, link.Host, post.By(), points), stringLength
+		} else {
+			return fmt.Sprintf("[-:-:b]%s (%s) [::-]by %s -- %s", post.Title(), link.Host, post.By(), points), stringLength
+		}
+	} else {
+		eWidth := 8 + pBy + pLen
+		stringLength := eWidth + pTitle
+		if (pTitle + eWidth) > tWidth {
+			oSpaces := tWidth - eWidth - 3
+			title := post.Title()[:oSpaces] + "..."
+			return fmt.Sprintf("[-:-:d]%s [::-]by %s -- %s", title, post.By(), points), stringLength
+		}
+		return fmt.Sprintf("[-:-:d]%s [::-]by %s -- %s", post.Title(), post.By(), points), stringLength
 	}
 }
 
 // formatPoints will return a color-graded string based on the provided score.
 func formatPoints(score int) string {
-	one := "#4F742C"
-	two := "#729633"
-	three := "#8DB13A"
-	four := "#B0CE3B"
-	five := "#C9D841"
-	six := "#D5DC4C"
-	seven := "#DCE15D"
-
+	colorScale := []string{
+		"#11174B", "#162065", "#1C2B7F", "#24448E", "#2D5E9E", "#3577AE", "#3D91BE", "#46ACE0", "#62BED2", "#8ACDCE", "#B3DDCC", "#DCECC9",
+	}
 	switch {
-	case score <= 5:
-		return fmt.Sprintf("[%s::]%d points", one, score)
-	case score <= 10:
-		return fmt.Sprintf("[%s::]%d points", two, score)
+	case score <= 1:
+		return fmt.Sprintf("[%s::]%d point", colorScale[0], score)
+	case score <= 7:
+		return fmt.Sprintf("[%s::]%d points", colorScale[0], score)
 	case score <= 15:
-		return fmt.Sprintf("[%s::]%d points", three, score)
-	case score <= 20:
-		return fmt.Sprintf("[%s::]%d points", four, score)
-	case score <= 25:
-		return fmt.Sprintf("[%s::]%d points", five, score)
-	case score <= 30:
-		return fmt.Sprintf("[%s::]%d points", six, score)
+		return fmt.Sprintf("[%s::]%d points", colorScale[1], score)
+	case score <= 23:
+		return fmt.Sprintf("[%s::]%d points", colorScale[2], score)
+	case score <= 31:
+		return fmt.Sprintf("[%s::]%d points", colorScale[3], score)
+	case score <= 39:
+		return fmt.Sprintf("[%s::]%d points", colorScale[4], score)
+	case score <= 47:
+		return fmt.Sprintf("[%s::]%d points", colorScale[5], score)
+	case score <= 55:
+		return fmt.Sprintf("[%s::]%d points", colorScale[6], score)
+	case score <= 63:
+		return fmt.Sprintf("[%s::]%d points", colorScale[7], score)
+	case score <= 71:
+		return fmt.Sprintf("[%s::]%d points", colorScale[8], score)
+	case score <= 79:
+		return fmt.Sprintf("[%s::]%d points", colorScale[9], score)
+	case score <= 87:
+		return fmt.Sprintf("[%s::]%d points", colorScale[10], score)
 	default:
-		return fmt.Sprintf("[%s::]%d points", seven, score)
+		return fmt.Sprintf("[%s::]%d points", colorScale[11], score)
 	}
 }
