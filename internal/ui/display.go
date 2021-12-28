@@ -106,7 +106,7 @@ func (a *App) initializePanels() *cview.Panels {
 
 	panels.SetChangedFunc(a.changedPanelsHandler)
 
-	a.initializeInputHandler(browserPanel, postPanel)
+	a.initializeInputHandler(browserPanel, a.postView.content, a.postView.commentsTree)
 
 	return panels
 }
@@ -159,6 +159,7 @@ func (a *App) resizeHandler(width, height int) {
 			a.listView.resizeListItems(width)
 		} else if oldHeight != height {
 			a.width = width
+			a.height = height
 			a.listView.populateList()
 		}
 	}
