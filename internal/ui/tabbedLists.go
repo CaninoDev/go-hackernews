@@ -362,35 +362,30 @@ func formatUnreadPostLine(post store.Item, tWidth int) (string, int) {
 
 // formatPoints will return a color-graded string based on the provided score.
 func formatPoints(score int) string {
-	colorScale := []string{
-		"#11174B", "#162065", "#1C2B7F", "#24448E", "#2D5E9E", "#3577AE", "#3D91BE", "#46ACE0", "#62BED2", "#8ACDCE", "#B3DDCC", "#DCECC9",
-	}
 	switch {
 	case score <= 1:
-		return fmt.Sprintf("[%s::]%d point", colorScale[0], score)
-	case score <= 7:
-		return fmt.Sprintf("[%s::]%d points", colorScale[0], score)
-	case score <= 15:
-		return fmt.Sprintf("[%s::]%d points", colorScale[1], score)
-	case score <= 23:
-		return fmt.Sprintf("[%s::]%d points", colorScale[2], score)
-	case score <= 31:
-		return fmt.Sprintf("[%s::]%d points", colorScale[3], score)
-	case score <= 39:
-		return fmt.Sprintf("[%s::]%d points", colorScale[4], score)
-	case score <= 47:
-		return fmt.Sprintf("[%s::]%d points", colorScale[5], score)
-	case score <= 55:
-		return fmt.Sprintf("[%s::]%d points", colorScale[6], score)
-	case score <= 63:
-		return fmt.Sprintf("[%s::]%d points", colorScale[7], score)
-	case score <= 71:
-		return fmt.Sprintf("[%s::]%d points", colorScale[8], score)
-	case score <= 79:
-		return fmt.Sprintf("[%s::]%d points", colorScale[9], score)
-	case score <= 87:
-		return fmt.Sprintf("[%s::]%d points", colorScale[10], score)
+		return fmt.Sprintf("[%s::]%d point", ScoreHeatMap[11], score)
+	case score <= 26:
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[10], score)
+	case score <= 51:
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[9], score)
+	case score <= 76:
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[8], score)
+	case score <= 101:
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[7], score)
+	case score <= 126:
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[6], score)
+	case score <= 151:
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[5], score)
+	case score <= 176:
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[4], score)
+	case score <= 201:
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[3], score)
+	case score <= 363:
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[2], score)
+	case score <= 446:
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[1], score)
 	default:
-		return fmt.Sprintf("[%s::]%d points", colorScale[11], score)
+		return fmt.Sprintf("[%s::]%d points", ScoreHeatMap[0], score)
 	}
 }
