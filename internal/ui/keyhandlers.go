@@ -26,10 +26,6 @@ import (
 //	a.ui.SetInputCapture(bindingCfg.Capture)
 //}
 
-func (a *App) handleTabSwitch(ev *tcell.EventKey) *tcell.EventKey {
-	return nil
-}
-
 func (a *App) quit(_ *tcell.EventKey) *tcell.EventKey {
 	a.ui.Stop()
 	return nil
@@ -47,7 +43,6 @@ func (a *App) handleToggle() *tcell.EventKey {
 			}
 		} else {
 			a.panels.SetCurrentPanel(POSTPANEL)
-			a.ui.SetFocus(a.postView.content)
 		}
 	}
 
@@ -64,6 +59,7 @@ func (a *App) initializeInputHandler(panes ...cview.Primitive) {
 }
 
 func (a *App) inputHandler(event *tcell.EventKey) *tcell.EventKey {
+
 	switch event.Key() {
 	case tcell.KeyEscape:
 		a.quit(event)
@@ -71,23 +67,26 @@ func (a *App) inputHandler(event *tcell.EventKey) *tcell.EventKey {
 		a.handleToggle()
 	case tcell.KeyCtrlN:
 		a.listView.tabbedLists.SetCurrentTab(api.New.String())
+		go a.listView.populateList()
 	case tcell.KeyCtrlJ:
 		a.listView.tabbedLists.SetCurrentTab(api.Jobs.String())
+		go a.listView.populateList()
 	case tcell.KeyCtrlT:
 		a.listView.tabbedLists.SetCurrentTab(api.Top.String())
+		go a.listView.populateList()
 	case tcell.KeyCtrlB:
 		a.listView.tabbedLists.SetCurrentTab(api.Best.String())
+		go a.listView.populateList()
 	case tcell.KeyCtrlS:
 		a.listView.tabbedLists.SetCurrentTab(api.Show.String())
+		go a.listView.populateList()
 	case tcell.KeyCtrlA:
 		a.listView.tabbedLists.SetCurrentTab(api.Ask.String())
+		go a.listView.populateList()
 	case tcell.KeyCtrlP:
 		a.listView.pageNav(prev)
 	case tcell.KeyCtrlL:
 		a.listView.pageNav(next)
-	default:
-		return event
 	}
-	go a.listView.populateList()
 	return event
 }

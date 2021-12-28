@@ -19,7 +19,7 @@ const (
 	next
 )
 
-// TabbedList contains the various primitives and states necessary to
+// TabbedLists contains the various primitives and states necessary to
 // provide a set of tabbed lists of posts.
 type TabbedLists struct {
 	app         *App
@@ -37,6 +37,7 @@ type listState struct {
 	currentPageIndex      int
 	lastSelectedItemIndex int
 	maxListItemWidth      int
+	sync.RWMutex
 }
 
 // NewTabbedLists returns a TabbedList with an
@@ -65,7 +66,6 @@ func (t *TabbedLists) initializeTabbedLists() {
 		list.SetPadding(1, 1, 1, 1)
 		list.SetCompact(true)
 		list.SetScrollBarVisibility(cview.ScrollBarNever)
-		list.SetChangedFunc(t.listChangedHandler)
 		list.ShowSecondaryText(false)
 		t.states[tabLabel] = &listState{
 			List:                  list,
@@ -81,11 +81,6 @@ func (t *TabbedLists) initializeTabbedLists() {
 	// t.tabbedLists.SetChangedFunc(t.tabsHandler)
 }
 
-// Record the last highlighted item.
-func (t *TabbedLists) listChangedHandler(idx int, _ *cview.ListItem) {
-	// t.setLastSelectedItemIndex(idx)
-}
-
 // setSLastSelectedItemIndex records the last selected item index.
 func (t *TabbedLists) setLastSelectedItemIndex(idx int) {
 	t.Lock()
@@ -95,10 +90,10 @@ func (t *TabbedLists) setLastSelectedItemIndex(idx int) {
 	t.states[currentTab].lastSelectedItemIndex = idx
 }
 
-// listItemHandler defines the behvarior when the user selects an item from the list; namely
+// listItemHandler defines the behavior when the user selects an item from the list; namely
 // sets the item read timestamp, formats the list item accordingly to indicate that it has been
 // read, loads the comment tree and viewer, and switches over to the postView view panel.
-func (t *TabbedLists) listItemHandler(selectedItemIndex int, listItem *cview.ListItem) {
+func (t *TabbedLists) listItemHandler(_ int, listItem *cview.ListItem) {
 	post := listItem.GetReference().(store.Item)
 	_, _, w, _ := t.tabbedLists.GetInnerRect()
 	setReadTimeStamp := func() {
@@ -122,55 +117,68 @@ func (t *TabbedLists) populateList() {
 
 	pagedBatch, totalPages := t.paginate(currentTab)
 
+	paginationInfo := fmt.Sprintf("(%d/%d)", t.states[currentTab].currentPageIndex+1, totalPages)
+
+	width := t.app.width
+
+	clearList := func() {
+		t.app.statusBar.SetText(paginationInfo)
+		t.statusBar.SetMax(len(pagedBatch) - 1)
+		t.states[currentTab].Clear()
+		t.states[currentTab].lastSelectedItemIndex = 0
+	}
+
 	renderList := func() {
-		paginationInfo := fmt.Sprintf("(%d/%d)", t.states[currentTab].currentPageIndex+1, totalPages)
-
-		width := t.app.width
-
-		clearList := func() {
-			t.app.statusBar.SetText(paginationInfo)
-			t.statusBar.SetMax(len(pagedBatch) - 1)
-			t.states[currentTab].lastSelectedItemIndex = 0
-			t.states[currentTab].Clear()
-		}
-
 		t.app.ui.QueueUpdateDraw(clearList)
-
-		resetProgressBar := func() {
-			t.statusBar.SetProgress(0)
-		}
-
 		for _, id := range pagedBatch {
 			post, err := t.app.store.Item(id)
+
 			if err != nil {
 				t.app.statusBar.SetText(fmt.Sprintf("%v", err))
 			}
 
 			fmtStr, maxLenStr := formatPrimaryLine(post, width)
 
-			listItem := cview.NewListItem(fmtStr)
+			// Find the longest ListItem's length
 			if t.states[currentTab].maxListItemWidth < maxLenStr {
 				t.states[currentTab].maxListItemWidth = maxLenStr
 			}
 
+			listItem := cview.NewListItem(fmtStr)
 			listItem.SetReference(post)
 
-			// addItem adds the item to the current list and updates the progress bar.
-			addItem := func() {
+			addList := func() {
 				t.states[currentTab].AddItem(listItem)
-				t.statusBar.AddProgress(1)
-			}
-			t.app.ui.QueueUpdateDraw(addItem)
-		}
 
-		if t.statusBar.Complete() {
-			t.app.ui.QueueUpdateDraw(resetProgressBar)
+				if t.statusBar.Complete() {
+					t.statusBar.SetProgress(0)
+				} else {
+					t.statusBar.SetProgress(1)
+				}
+			}
+
+			t.app.ui.QueueUpdateDraw(addList)
+
 		}
 	}
 
-	// If the the list is empty, populate it
-	if t.states[currentTab].GetItemCount() == 0 {
+	// If the list is empty, populate it,
+	// otherwise, check to see if the terminal has been resized
+	listItemCount := t.states[currentTab].GetItemCount()
+	lengthOfCurrentBatch := len(pagedBatch)
+
+	if listItemCount == 0 || lengthOfCurrentBatch != listItemCount {
 		renderList()
+		return
+	}
+	firstBatchedID := pagedBatch[0]
+	listItem := t.states[currentTab].GetItem(0)
+	firstPostRef := listItem.GetReference()
+	firstPost := firstPostRef.(store.Item)
+	firstPostID := firstPost.ID()
+	if firstBatchedID != firstPostID {
+		renderList()
+		return
 	}
 }
 
@@ -195,14 +203,12 @@ func (t *TabbedLists) resizeListItems(width int) {
 // the batch of ids from the current state of the list index,
 // and the total number of screens(pages) it will take to render the entire list.
 func (t *TabbedLists) paginate(currentTab string) ([]int, int) {
-	_, _, _, rectHeight := t.tabbedLists.GetInnerRect()
+	listLength := t.app.height - 5
 
-	listLength := rectHeight - 3
 	if !t.states[currentTab].GetCompact() {
 		listLength /= 2
 	}
 
-	// t.app.statusBar.SetText(fmt.Sprintf("screenheight: %d, listlength: %d", rectHeight, listLength))
 	totalPostCount := len(t.states[currentTab].itemIDs)
 
 	totalPageCount := math.Ceil(float64(totalPostCount) / float64(listLength))
@@ -223,53 +229,34 @@ func (t *TabbedLists) paginate(currentTab string) ([]int, int) {
 func (t *TabbedLists) pageNav(nav Nav) {
 	currentTab := t.tabbedLists.GetCurrentTab()
 
-	// Capture the current state of the list
-	currentPageIndex := &t.states[currentTab].currentPageIndex
-	listLength := t.states[currentTab].GetItemCount()
-	totalPostCount := len(t.states[currentTab].itemIDs)
-	maxIndex := int(math.Ceil(float64(totalPostCount) / float64(listLength)))
-
+	_, totalPageCount := t.paginate(currentTab)
+	currentPageIndex := t.states[currentTab].currentPageIndex
 	switch nav {
-	case next:
-		// If we are on the last page, select the last item on the list. Otherwise
-		// repopulate the list with the contents of the next page.
-		if *currentPageIndex >= maxIndex {
-			lastItemIndex := t.states[currentTab].GetItemCount()
-			t.states[currentTab].SetCurrentItem(lastItemIndex)
-		} else {
-			*currentPageIndex++
-			t.populateList()
-		}
 	case prev:
-		// If we are on the first page, select the first item on the list. Otherwise
-		// repopulate list with the contents of the previous page.
-		if *currentPageIndex == 0 {
+		if currentPageIndex == 0 {
 			t.states[currentTab].SetCurrentItem(0)
 		} else {
-			*currentPageIndex--
+			t.states[currentTab].currentPageIndex--
+			t.populateList()
+		}
+	case next:
+		if currentPageIndex == totalPageCount-1 {
+			listItemCount := t.states[currentTab].GetItemCount()
+			t.states[currentTab].SetCurrentItem(listItemCount - 1)
+		} else {
+			t.states[currentTab].currentPageIndex++
 			t.populateList()
 		}
 	}
-
-	//t.app.statusBar.SetText(
-	//	fmt.Sprintf(
-	//		"Items[#CurrentList:%d -- #TotalItems:%d] Pages[Old:%d -- New:%d -- TotalPages:%d]",
-	//		listLength,
-	//		len(t.states[currentTab].itemIDs),
-	//		*currentPageIndex,
-	//		t.states[currentTab].currentPageIndex,
-	//		maxIndex,
-	//	),
-	//)
 }
 
-// formatPrimaryLine will return a formmatted string for the item's title
+// formatPrimaryLine will return a formatted string for the item's title
 // based on various attributes.
-func formatPrimaryLine(post store.Item, terminal_width int) (string, int) {
+func formatPrimaryLine(post store.Item, terminalWidth int) (string, int) {
 	if post.GetReadStamp() != time.Unix(0, 0) {
-		return formatReadPostLine(post, terminal_width)
+		return formatReadPostLine(post, terminalWidth)
 	} else {
-		return formatUnreadPostLine(post, terminal_width)
+		return formatUnreadPostLine(post, terminalWidth)
 	}
 }
 
